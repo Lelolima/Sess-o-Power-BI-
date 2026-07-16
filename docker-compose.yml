@@ -1,0 +1,364 @@
+# 🐳 Docker Compose - Dashboard Hospitalar
+
+Version completa para produção com reverse proxy, cache e monitoramento.
+
+## 📁 docker-compose.yml
+
+```yaml
+version: '3.8'
+
+services:
+  # =============================================================================
+  # App Principal - Streamlit Dashboard
+  # =============================================================================
+  dashboard:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: hospital-dashboard
+    restart: unless-stopped
+    environment:
+      - STREAMLIT_SERVER_PORT=8501
+      - STREAMLIT_SERVER_ADDRESS=0.0.0.0
+      - STREAMLIT_SERVER_HEADLESS=true
+      - STREAMLIT_BROWSER_GATHER_USAGE_STATS=false
+    volumes:
+      - ./data:/app/data:ro
+      - dashboard_cache:/app/.cache
+    networks:
+      - hospital-network
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8501"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"
+
+  # =============================================================================
+  # Nginx - Reverse Proxy
+  # =============================================================================
+  nginx:
+    image: nginx:alpine
+    container_name: hospital-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl:/etc/nginx/ssl:ro
+      - nginx_logs:/var/log/nginx
+    depends_on:
+      - dashboard
+    networks:
+      - hospital-network
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"
+
+  # =============================================================================
+  # Redis - Cache Layer
+  # =============================================================================
+  redis:
+    image: redis:7-alpine
+    container_name: hospital-redis
+    restart: unless-stopped
+    command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
+    networks:
+      - hospital-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # =============================================================================
+  # Watchtower - Auto Updates
+  # =============================================================================
+  watchtower:
+    image: containrrr/watchtower:latest
+    container_name: hospital-watchtower
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: --cleanup --interval 3600 --label-enable
+    networks:
+      - hospital-network
+    environment:
+      - WATCHTOWER_NOTIFICATIONS=auto
+
+  # =============================================================================
+  # Prometheus - Monitoring (Opcional)
+  # =============================================================================
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: hospital-prometheus
+    restart: unless-stopped
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+    ports:
+      - "9090:9090"
+    networks:
+      - hospital-network
+    profiles:
+      - monitoring
+
+  # =============================================================================
+  # Grafana - Visualização de Métricas (Opcional)
+  # =============================================================================
+  grafana:
+    image: grafana/grafana:latest
+    container_name: hospital-grafana
+    restart: unless-stopped
+    volumes:
+      - grafana_data:/var/lib/grafana
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin}
+    ports:
+      - "3000:3000"
+    networks:
+      - hospital-network
+    depends_on:
+      - prometheus
+    profiles:
+      - monitoring
+
+networks:
+  hospital-network:
+    driver: bridge
+
+volumes:
+  dashboard_cache:
+  nginx_logs:
+  redis_data:
+  prometheus_data:
+  grafana_data:
+```
+
+## 📁 .env.example
+
+```bash
+# =============================================================================
+# Variáveis de Ambiente - Dashboard Hospitalar
+# =============================================================================
+
+# Streamlit
+STREAMLIT_SERVER_PORT=8501
+STREAMLIT_SERVER_HEADLESS=true
+STREAMLIT_BROWSER_GATHER_USAGE_STATS=false
+
+# Segurança
+GRAFANA_PASSWORD=CHANGE_ME_STRONG_PASSWORD
+
+# Banco de Dados (se aplicável)
+DATABASE_URL=postgresql://user:password@localhost:5432/hospital
+DATABASE_POOL_SIZE=10
+
+# Cache
+REDIS_URL=redis://redis:6379/0
+
+# Logs
+LOG_LEVEL=INFO
+LOG_FORMAT=json
+
+# Monitoramento
+ENABLE_METRICS=true
+METRICS_PORT=9090
+
+# SSL/TLS
+SSL_CERT_PATH=/etc/nginx/ssl/cert.pem
+SSL_KEY_PATH=/etc/nginx/ssl/key.pem
+```
+
+## 📁 nginx.conf
+
+```nginx
+events {
+    worker_connections 1024;
+}
+
+http {
+    # Otimizações
+    sendfile on;
+    tcp_nopush on;
+    tcp_nodelay on;
+    keepalive_timeout 65;
+    types_hash_max_size 2048;
+
+    # Gzip compression
+    gzip on;
+    gzip_vary on;
+    gzip_min_length 1024;
+    gzip_proxied expired no-cache no-store private auth;
+    gzip_types text/plain text/css text/xml text/javascript application/x-javascript application/xml application/javascript;
+
+    # Rate limiting
+    limit_req_zone $binary_remote_addr zone=api_limit:10m rate=10r/s;
+    limit_conn_zone $binary_remote_addr zone=conn_limit:10m;
+
+    upstream dashboard_backend {
+        server dashboard:8501;
+        keepalive 32;
+    }
+
+    server {
+        listen 80;
+        server_name _;
+        return 301 https://$server_name$request_uri;
+    }
+
+    server {
+        listen 443 ssl http2;
+        server_name localhost;
+
+        # SSL配置
+        ssl_certificate /etc/nginx/ssl/cert.pem;
+        ssl_certificate_key /etc/nginx/ssl/key.pem;
+        ssl_protocols TLSv1.2 TLSv1.3;
+        ssl_ciphers HIGH:!aNULL:!MD5;
+        ssl_prefer_server_ciphers on;
+        ssl_session_cache shared:SSL:10m;
+        ssl_session_timeout 10m;
+
+        # Security headers
+        add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+        add_header X-Frame-Options "SAMEORIGIN" always;
+        add_header X-Content-Type-Options "nosniff" always;
+        add_header X-XSS-Protection "1; mode=block" always;
+        add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+
+        # Logging
+        access_log /var/log/nginx/access.log combined;
+        error_log /var/log/nginx/error.log;
+
+        # Health check endpoint
+        location /health {
+            access_log off;
+            return 200 "healthy\n";
+            add_header Content-Type text/plain;
+        }
+
+        # Main app
+        location / {
+            limit_req zone=api_limit burst=20 nodelay;
+            limit_conn conn_limit 10;
+
+            proxy_pass http://dashboard_backend;
+            proxy_http_version 1.1;
+            proxy_set_header Upgrade $http_upgrade;
+            proxy_set_header Connection "upgrade";
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+
+            proxy_connect_timeout 60s;
+            proxy_send_timeout 60s;
+            proxy_read_timeout 60s;
+
+            # Cache static assets
+            location ~* \.(jpg|jpeg|png|gif|ico|css|js|svg|woff|woff2)$ {
+                expires 1y;
+                add_header Cache-Control "public, immutable";
+            }
+        }
+
+        # Metrics endpoint (protected)
+        location /metrics {
+            auth_basic "Metrics";
+            auth_basic_user_file /etc/nginx/.htpasswd;
+            proxy_pass http://prometheus:9090;
+        }
+    }
+}
+```
+
+## 📁 prometheus.yml
+
+```yaml
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: 'nginx'
+    static_configs:
+      - targets: ['nginx:80']
+
+  - job_name: 'redis'
+    static_configs:
+      - targets: ['redis:6379']
+
+  - job_name: 'dashboard'
+    static_configs:
+      - targets: ['dashboard:8501']
+```
+
+## 🚀 Comandos de Uso
+
+```bash
+# Iniciar todos os serviços
+docker-compose up -d
+
+# Iniciar com monitoramento
+docker-compose --profile monitoring up -d
+
+# Ver logs
+docker-compose logs -f dashboard
+
+# Verificar status
+docker-compose ps
+
+# Parar todos
+docker-compose down
+
+# Backup Redis
+docker-compose exec redis redis-cli SAVE
+docker cp hospital-redis:/data/dump.rdb ./backup-redis.rdb
+
+# Restaurar backup
+docker cp backup-redis.rdb hospital-redis:/data/dump.rdb
+docker-compose exec redis redis-cli BGSAVE
+```
+
+## 🔒 Segurança
+
+```bash
+# Gerar senhas fortes
+openssl rand -base64 32
+
+# Gerar certificados SSL auto-assinados
+openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+  -keyout ssl/key.pem -out ssl/cert.pem \
+  -subj "/CN=localhost"
+
+# Gerar htpasswd para métricas
+docker run --rm httpd htpasswd -Bbn admin strongpassword > .htpasswd
+```
+
+## 📊 Monitoramento
+
+Acesse:
+- Dashboard: http://localhost
+- Prometheus: http://localhost:9090
+- Grafana: http://localhost:3000 (admin/admin)
+- Redis: docker-compose exec redis redis-cli
+
+---
+
+**Próximos passos**:
+1. Configurar domínio e SSL real (Let's Encrypt)
+2. Configurar alertas no Prometheus
+3. Configurar dashboards no Grafana
+4. Implementar backup automatizado

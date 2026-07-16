@@ -1,0 +1,185 @@
+================================================================================
+                    COMANDOS GIT - ENVIO PARA REPOSITÓRIO
+                    https://github.com/Lelolima/Sess-o-Power-BI-
+================================================================================
+
+Local: C:\Users\Thinkin pad 8g\Desktop\Sess-o-power-BI
+
+================================================================================
+OPÇÃO 1: PUSH INICIAL (Repositório Vazio)
+================================================================================
+
+# 1. Navegar até a pasta do projeto
+cd "C:\Users\Thinkin pad 8g\Desktop\Sess-o-power-BI"
+
+# 2. Inicializar repositório Git
+git init
+
+# 3. Adicionar todos os arquivos
+git add .
+
+# 4. Verificar o que será commitado
+git status
+
+# 5. Commit inicial
+git commit -m "feat: projeto completo de dashboard hospitalar Power BI
+
+- Estrutura organizada com docs, src, tests, data, screenshots
+- Dashboard web em Streamlit com 4 páginas
+- 30+ testes unitários com pytest
+- 5 SVGs animados para demonstração
+- Docker e CI/CD configurados
+- Documentação completa (README, DEPLOY, GETTING_STARTED)
+- Datasets de exemplo anonimizados
+- Scripts ETL em Python
+- Medidas DAX catalogadas
+
+Autor: Wellington de Lima Catarina <lelolima806@gmail.com>"
+
+# 6. Renomear branch para main
+git branch -M main
+
+# 7. Adicionar repositório remoto
+git remote add origin https://github.com/Lelolima/Sess-o-Power-BI-.git
+
+# 8. Verificar remoto configurado
+git remote -v
+
+# 9. Push para o GitHub
+git push -u origin main
+
+================================================================================
+OPÇÃO 2: SE JÁ EXISTE REPOSITÓRIO REMOTO
+================================================================================
+
+# 1. Navegar até a pasta do projeto
+cd "C:\Users\Thinkin pad 8g\Desktop\Sess-o-power-BI"
+
+# 2. Verificar status atual
+git status
+
+# 3. Adicionar novos arquivos
+git add .
+
+# 4. Commit
+git commit -m "feat: update completo do projeto com SVGs animados e docs
+
+Adicionado:
+- 5 SVGs animados para o README
+- Documentação completa de deploy (DEPLOY.md)
+- docker-compose.yml para produção
+- Testes unitários expandidos
+- Status do projeto atualizado"
+
+# 5. Push (se já houver remote configurado)
+git push origin main
+
+================================================================================
+OPÇÃO 3: SE PRECISA RECONFIGURAR REMOTO
+================================================================================
+
+# 1. Remover remote antigo (se existir)
+git remote remove origin
+
+# 2. Adicionar novo remote
+git remote add origin https://github.com/Lelolima/Sess-o-Power-BI-.git
+
+# 3. Verificar
+git remote -v
+
+# 4. Push
+git push -u origin main
+
+================================================================================
+COMANDOS DE VERIFICAÇÃO
+================================================================================
+
+# Ver branch atual
+git branch
+
+# Ver histórico de commits
+git log --oneline
+
+# Ver diferenças não staged
+git diff
+
+# Ver arquivos staged
+git diff --cached
+
+# Ver status detalhado
+git status
+
+# Ver remote URLs
+git remote -v
+
+================================================================================
+COMANDOS PARA PUXAR ALTERAÇÕES (Se necessário)
+================================================================================
+
+# Puxar alterações do remoto
+git pull origin main
+
+# Forçar sync com remoto (cuidado: sobrescreve local)
+git fetch origin
+git reset --hard origin/main
+
+================================================================================
+COMANDOS PARA LIMPEZA (Se necessário)
+================================================================================
+
+# Remover arquivos não rastreados
+git clean -fd
+
+# Reset completo (PERDE alterações não commitadas!)
+git reset --hard HEAD
+
+================================================================================
+AUTENTICAÇÃO
+
+Se solicitado autenticação, use uma das opções:
+
+OPÇÃO A: GitHub Personal Access Token (Recomendado)
+1. Acesse: https://github.com/settings/tokens
+2. Generate new token (classic)
+3. Marque: repo, workflow
+4. Copie o token
+5. No prompt de senha, cole o token
+
+OPÇÃO B: SSH (Se configurado)
+1. git remote set-url origin git@github.com:Lelolima/Sess-o-Power-BI-.git
+2. git push -u origin main
+
+OPÇÃO C: Git Credential Manager (Windows)
+- Apenas siga o popup de login do GitHub
+
+================================================================================
+COMANDOS RÁPIDOS (Copy & Paste - TUDO EM UMA VEZ)
+================================================================================
+
+# Copie e execute bloco abaixo no PowerShell:
+
+cd "C:\Users\Thinkin pad 8g\Desktop\Sess-o-power-BI"
+git init
+git add .
+git commit -m "feat: projeto completo dashboard hospitalar Power BI"
+git branch -M main
+git remote add origin https://github.com/Lelolima/Sess-o-Power-BI-.git
+git push -u origin main
+
+================================================================================
+PÓS-ENVIO
+
+1. Verifique no GitHub: https://github.com/Lelolima/Sess-o-Power-BI-
+2. Confira se todos os arquivos foram enviados
+3. Se for repositório público, os SVGs animados aparecerão no README
+4. Opcional: Configure Streamlit Cloud apontando para este repositório
+
+================================================================================
+LINKS ÚTEIS
+
+- Repositório: https://github.com/Lelolima/Sess-o-Power-BI-
+- Seu profile: https://github.com/Lelolima
+- GitHub Desktop (opcional): https://desktop.github.com/
+- docs Git: https://git-scm.com/doc
+
+================================================================================
