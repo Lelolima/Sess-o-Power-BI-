@@ -27,7 +27,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r src/web/requirements.txt pytest pytest-cov ruff
-      - name: Lint (erros reais: sintaxe, nomes indefinidos, imports não usados)
+      - name: "Lint (erros reais - sintaxe, nomes indefinidos, imports não usados)"
         run: ruff check --select E9,F63,F7,F82,F401,F841 src tests
       - name: Testes
         run: pytest
