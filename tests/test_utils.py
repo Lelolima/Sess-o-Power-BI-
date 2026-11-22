@@ -4,10 +4,7 @@ Testes unitários para utilitários do Dashboard Hospitalar.
 Executar: pytest tests/test_utils.py -v
 """
 
-import pytest
 import pandas as pd
-import numpy as np
-from datetime import datetime
 
 from src.web.utils import (
     validar_dataframe,
@@ -18,7 +15,7 @@ from src.web.utils import (
     calcular_taxa_ocupacao,
     calcular_tempo_medio_espera,
     calcular_giro_leitos,
-    calcular_variação,
+    calcular_variacao,
     classificar_ocupacao,
     classificar_tempo_espera,
     gerar_dados_sinteticos,
