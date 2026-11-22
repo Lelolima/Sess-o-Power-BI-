@@ -58,7 +58,7 @@ Acesse a versão web interativa: **[healthcare-analytics.netlify.app](https://he
 #### Metas vs Realizado (Gauges)
 ![Metas vs Realizado](screenshots/dashboard-gauges-metas.svg)
 
-> ✨ **Nota:** As animações acima simulam o comportamento em tempo real do dashboard. No projeto real, os dados são atualizados a cada 5 minutos via streaming ou refresh agendado.
+> ⚠️ **Nota:** as imagens acima são SVGs ilustrativos. Este repositório não contém arquivo `.pbix`; a parte executável é o app Streamlit em `src/web/`, que usa **dados sintéticos** gerados em código (não são dados hospitalares reais).
 
 ---
 
@@ -88,29 +88,21 @@ Acesse a versão web interativa: **[healthcare-analytics.netlify.app](https://he
 ## 📁 Estrutura do Projeto
 
 ```
-portfolio-bi-wellington-lima/
-├── dashboards/              # Arquivos .pbix e exports
-│   ├── Dashboard-Hospitalar.pbix
-│   └── Dashboard-Hospitalar.pdf
-├── data/                    # Datasets (anonimizados)
-│   ├── pacientes_sample.csv
-│   └── procedimentos_sample.csv
-├── docs/                    # Documentação técnica
-│   ├── arquitetura.md
-│   ├── estudo-de-caso-hospitalar.md
-│   ├── medidas-dax.md
-│   └── roadmap.md
-├── screenshots/             # Imagens do dashboard
-├── src/                     # Código fonte
-│   ├── etl/
-│   │   └── pacientes_etl.py
+.
+├── src/
+│   ├── etl/pacientes_etl.py   # gera CSVs sintéticos em ./data (criado na execução)
 │   └── web/
-│       └── app.py (Streamlit)
-├── .gitignore
-├── LICENSE
-├── README.md
-└── ROADMAP.md
+│       ├── app.py             # dashboard Streamlit (dados sintéticos)
+│       ├── utils.py           # cálculos/formatadores de KPI
+│       └── requirements.txt
+├── tests/                     # pytest (utils, app via streamlit.testing, ETL)
+├── docs/                      # documentação (DAX, arquitetura, estudo de caso)
+├── screenshots/               # SVGs ilustrativos
+├── Dockerfile / docker-compose.yml
+└── .github/workflows/ci.yml   # lint + testes + build Docker (sem deploy)
 ```
+
+> Não há `dashboards/*.pbix` nem `data/*.csv` versionados.
 
 ---
 
@@ -156,25 +148,33 @@ portfolio-bi-wellington-lima/
 ## 🚀 Como Usar
 
 ### Pré-requisitos
-- Power BI Desktop (versão mais recente)
-- Python 3.11+ (opcional, para scripts ETL)
+- Python 3.11+ (testado localmente com 3.13 e no CI com 3.11)
+- Nenhuma variável de ambiente é necessária.
 
-### Execucao Local
-1. Clone este repositório:
+### Instalação
 ```bash
-git clone https://github.com/Lelolima/portfolio-bi-wellington-lima.git
-cd portfolio-bi-wellington-lima
+git clone https://github.com/Lelolima/Sess-o-Power-BI-.git
+cd Sess-o-Power-BI-
+python -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\activate
+pip install -r src/web/requirements.txt
 ```
 
-2. Abra o arquivo `dashboards/Dashboard-Hospitalar.pbix` no Power BI Desktop
-
-3. Atualize a fonte de dados conforme necessário
-
-### Versão Web (Streamlit)
+### Executar o dashboard (Streamlit)
 ```bash
-cd src/web
-pip install -r requirements.txt
-streamlit run app.py
+streamlit run src/web/app.py
+```
+Abre em http://localhost:8501. Ou via Docker: `docker build -t dashboard-hospitalar . && docker run -p 8501:8501 dashboard-hospitalar`.
+
+### Gerar CSVs sintéticos (ETL)
+```bash
+python src/etl/pacientes_etl.py   # cria ./data/*_sample.csv
+```
+
+### Testes
+```bash
+pip install pytest pytest-cov ruff
+ruff check --select E9,F63,F7,F82,F401,F841 src tests
+pytest            # inclui cobertura mínima de 80% (pytest.ini)
 ```
 
 ---
