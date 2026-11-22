@@ -14,9 +14,13 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
-from datetime import datetime, timedelta
 import numpy as np
-from typing import Tuple, Dict, Any
+from typing import Tuple, Dict
+
+try:
+    from src.web.utils import calcular_giro_leitos
+except ImportError:  # execução via `streamlit run src/web/app.py`
+    from utils import calcular_giro_leitos
 
 # ============================================================================
 # CONFIGURAÇÕES GLOBAIS
@@ -133,7 +137,26 @@ def carregar_dados() -> Tuple[pd.DataFrame, pd.DataFrame]:
 # FUNÇÕES DE VISUALIZAÇÃO
 # ============================================================================
 
-def criar_cards_kpis(ocupacao_df: pd.DataFrame) -> None:
+def calcular_kpis_operacionais(ocupacao_df: pd.DataFrame, dados_esp: pd.DataFrame) -> Dict[str, float]:
+    """Calcula giro de leitos e tempo médio de espera a partir dos dados carregados.
+
+    Antes estes KPIs eram sorteados com np.random a cada renderização,
+    sem relação com os dados exibidos.
+    """
+    leitos_medios = float(ocupacao_df['Leitos_Disponiveis'].mean())
+    ultimo_mes = dados_esp[dados_esp['Mes'] == MESES[-1]]
+    penultimo_mes = dados_esp[dados_esp['Mes'] == MESES[-2]]
+    giro = calcular_giro_leitos(int(ultimo_mes['Pacientes'].sum()), leitos_medios)
+    giro_anterior = calcular_giro_leitos(int(penultimo_mes['Pacientes'].sum()), leitos_medios)
+    return {
+        'giro_leitos': giro,
+        'delta_giro': giro - giro_anterior,
+        'tempo_espera': float(ultimo_mes['Tempo_Espera'].mean()),
+        'tempo_espera_medio': float(dados_esp['Tempo_Espera'].mean()),
+    }
+
+
+def criar_cards_kpis(ocupacao_df: pd.DataFrame, dados_esp: pd.DataFrame) -> None:
     """Cria cards com KPIs principais"""
 
     col1, col2, col3, col4 = st.columns(4)
@@ -141,6 +164,7 @@ def criar_cards_kpis(ocupacao_df: pd.DataFrame) -> None:
     ocupacao_media = ocupacao_df['Ocupacao'].mean()
     leitos_medios = ocupacao_df['Leitos_Disponiveis'].mean()
     dia_atual = ocupacao_df.iloc[-1]
+    kpis = calcular_kpis_operacionais(ocupacao_df, dados_esp)
 
     with col1:
         st.metric(
@@ -157,19 +181,17 @@ def criar_cards_kpis(ocupacao_df: pd.DataFrame) -> None:
         )
 
     with col3:
-        giro_leitos = np.random.uniform(2.5, 3.5)
         st.metric(
-            label="🔄 Giro de Leitos",
-            value=f"{giro_leitos:.1f}",
-            delta="+0.3"
+            label="🔄 Giro de Leitos (mês)",
+            value=f"{kpis['giro_leitos']:.1f}",
+            delta=f"{kpis['delta_giro']:+.1f}"
         )
 
     with col4:
-        tempo_espera = np.random.uniform(3, 6)
         st.metric(
             label="⏱️ Tempo Médio Espera",
-            value=f"{tempo_espera:.1f}h",
-            delta=f"{tempo_espera - 4.5:.1f}h",
+            value=f"{kpis['tempo_espera']:.1f}h",
+            delta=f"{kpis['tempo_espera'] - kpis['tempo_espera_medio']:.1f}h",
             delta_color="inverse"
         )
 
@@ -308,6 +330,7 @@ def main():
 
     # Carregar dados
     ocupacao_df, dados_esp = carregar_dados()
+    st.sidebar.info("Dados sintéticos gerados para demonstração; não são dados hospitalares reais.")
 
     if pagina == "Visão Geral":
         st.title("🏥 Dashboard de Análise Hospitalar")
@@ -318,7 +341,7 @@ def main():
         """)
 
         # Cards KPI
-        criar_cards_kpis(ocupacao_df)
+        criar_cards_kpis(ocupacao_df, dados_esp)
 
         st.divider()
 

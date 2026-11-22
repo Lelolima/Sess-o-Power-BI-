@@ -8,8 +8,7 @@ from __future__ import annotations
 
 import pandas as pd
 import numpy as np
-from typing import Optional, Dict, Any, Union
-from datetime import datetime
+from typing import Dict, Any
 
 
 # ============================================================================
@@ -92,7 +91,7 @@ def formatar_numero(valor: float, separador_milhar: str = ".") -> str:
     Returns:
         String formatada
     """
-    return f"{int(valor):{separador_milhar}}"
+    return f"{int(valor):,}".replace(",", separador_milhar)
 
 
 # ============================================================================
@@ -164,6 +163,10 @@ def calcular_variação(valor_atual: float, valor_anterior: float) -> float:
         return 0.0
 
     return ((valor_atual - valor_anterior) / valor_anterior) * 100
+
+
+# Alias ASCII; o nome original com acento é mantido por compatibilidade
+calcular_variacao = calcular_variação
 
 
 # ============================================================================

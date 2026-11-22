@@ -62,4 +62,7 @@ site/
 # Certificados e chaves
 *.pem
 *.key
-*.crt
+*.crthtmlcov/
+.coverage
+coverage.xml
+data/

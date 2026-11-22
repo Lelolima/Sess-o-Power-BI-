@@ -6,6 +6,7 @@ Extrai, transforma e carrega dados de exemplo para o Power BI
 import pandas as pd
 import numpy as np
 from datetime import datetime, timedelta
+import os
 import random
 
 # Configurações
@@ -64,7 +65,6 @@ def gerar_internacoes(pacientes_df: pd.DataFrame, n: int) -> pd.DataFrame:
 
     for i in range(n):
         id_paciente = random.choice(pacientes_df['Id_Paciente'].tolist())
-        paciente = pacientes_df[pacientes_df['Id_Paciente'] == id_paciente].iloc[0]
 
         # Data de entrada
         dias_offset = random.randint(0, 730)  # 2 anos
@@ -159,6 +159,7 @@ def salvar_datasets():
 
     # Salvar arquivos
     print("Salvando arquivos...")
+    os.makedirs('data', exist_ok=True)
     pacientes.to_csv('data/pacientes_sample.csv', index=False, encoding='utf-8')
     internacoes.to_csv('data/internacoes_sample.csv', index=False, encoding='utf-8')
     medicos.to_csv('data/medicos_sample.csv', index=False, encoding='utf-8')
